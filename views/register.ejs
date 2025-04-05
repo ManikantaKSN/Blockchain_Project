@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>User Registration</h1>
+    <nav>
+      <a href="/login">Login</a>
+    </nav>
+  </header>
+  <main>
+    <form action="/api/register" method="POST">
+      <label for="roll_number">Roll Number:</label>
+      <input type="text" id="roll_number" name="roll_number" required>
+      <br>
+      <label for="name">Name:</label>
+      <input type="text" id="name" name="name" required>
+      <br>
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required>
+      <br>
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required>
+      <br>
+      <label for="dob">Date of Birth:</label>
+      <input type="date" id="dob" name="dob">
+      <br>
+      <button type="submit">Register & Mint NFT</button>
+    </form>
+  </main>
+  <footer>
+    <p>&copy; 2025 College Name</p>
+  </footer>
+</body>
+</html>

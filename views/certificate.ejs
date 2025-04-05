@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    function generateCertificate(course_id, studentAddress) {
+      const user_id = document.getElementById("user_id").value;
+      fetch("/api/certificate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentAddress, user_id, course_id })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if(data.success) {
+          alert("Certificate generated successfully!");
+          window.location.href = "/dashboard?user_id=" + user_id;
+        } else {
+          alert("Error: " + data.error);
+        }
+      })
+      .catch(error => {
+        console.error("Certificate error:", error);
+      });
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Certificate Issuance</h1>
+    <nav>
+      <a href="/dashboard?user_id=<%= user_id %>">Dashboard</a> |
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+  <main>
+    <input type="hidden" id="user_id" value="<%= user_id %>">
+    <h2>Your Courses</h2>
+    <ul>
+      <% courses.forEach(course => { %>
+        <li>
+          <strong><%= course.course_name %></strong> – End Date: <%= course.end_date %>
+          <% if (new Date(currentDate) > new Date(course.end_date)) { %>
+            <button onclick="generateCertificate('<%= course.course_id %>', prompt('Enter your wallet address:'))">Generate Certificate</button>
+          <% } else { %>
+            <span>Certificate not available yet</span>
+          <% } %>
+        </li>
+      <% }); %>
+    </ul>
+  </main>
+  <footer>
+    <p>&copy; 2025 College Name</p>
+  </footer>
+</body>
+</html>

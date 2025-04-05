@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    function showCourseDetails() {
+      const select = document.getElementById("courseDropdown");
+      const selectedOption = select.options[select.selectedIndex];
+      const detailsDiv = document.getElementById("courseDetails");
+      // Display course details from data attributes
+      detailsDiv.innerHTML = "<p><strong>Course Name:</strong> " + selectedOption.getAttribute("data-name") +
+                             "</p><p><strong>Description:</strong> " + selectedOption.getAttribute("data-desc") +
+                             "</p><p><strong>End Date:</strong> " + selectedOption.getAttribute("data-end") + "</p>" +
+                             "<button onclick='registerCourse()'>Register for Course</button>";
+      detailsDiv.style.display = "block";
+    }
+    
+    function registerCourse() {
+      // Collect user_id from a hidden field or prompt (for demo, we use a prompt)
+      const user_id = prompt("Enter your User ID:");
+      const course_id = document.getElementById("courseDropdown").value;
+      const wallet_address = prompt("Enter your wallet address:");
+      fetch("/api/course", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, course_id, wallet_address })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if(data.success) {
+          alert("Course registration successful!");
+          window.location.href = "/dashboard?user_id=" + user_id;
+        } else {
+          alert("Error: " + data.error);
+        }
+      })
+      .catch(error => {
+        console.error("Registration error:", error);
+      });
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Course Registration</h1>
+    <nav>
+      <a href="/dashboard">Dashboard</a> |
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+  <main>
+    <label for="courseDropdown">Select a course:</label>
+    <select id="courseDropdown" onchange="showCourseDetails()">
+      <option value="">--Select a Course--</option>
+      <% courses.forEach(course => { %>
+        <option value="<%= course.course_id %>" data-name="<%= course.course_name %>" data-desc="<%= course.description %>" data-end="<%= course.end_date %>">
+          <%= course.course_name %>
+        </option>
+      <% }); %>
+    </select>
+    <div id="courseDetails" style="display:none; border:1px solid #ccc; padding: 1rem; margin-top:1rem;"></div>
+  </main>
+  <footer>
+    <p>&copy; 2025 College Name</p>
+  </footer>
+</body>
+</html>
