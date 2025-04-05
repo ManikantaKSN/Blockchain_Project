@@ -35,7 +35,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const provider = Web3.givenProvider || new Web3.providers.HttpProvider("http://localhost:8545");
 const web3 = new Web3(provider);
 
-// Load smart contract artifacts (uncomment and adjust paths if deployed)
+//Load smart contract artifacts (uncomment and adjust paths if deployed)
 const identityArtifact = require('./build/contracts/MyNFT.json');
 const courseArtifact = require('./build/contracts/MyCourseReg.json');
 const certificateArtifact = require('./build/contracts/CertificateNFT.json');
@@ -95,14 +95,14 @@ app.get('/register', (req, res) => {
 });
 
 // Dashboard: Simulate a logged-in user (user_id passed as query parameter)
-app.get('/dashboard', async (req, res) => {
+app.get('/index', async (req, res) => {
   const user_id = req.query.user_id;
   let courses = [];
   if (user_id) {
     const result = await pool.query('SELECT r.course_id, c.course_name FROM registrations r JOIN courses c ON r.course_id = c.course_id WHERE r.user_id = $1', [user_id]);
     courses = result.rows;
   }
-  res.render('dashboard', { title: 'Dashboard', user_id, courses });
+  res.render('index', { title: 'Dashboard', user_id, courses });
 });
 
 // Course Registration page – shows dropdown of available courses
