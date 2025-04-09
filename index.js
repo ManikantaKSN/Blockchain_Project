@@ -32,7 +32,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Connect to Ethereum using an HTTP provider as fallback.
-const provider = Web3.givenProvider || new Web3.providers.HttpProvider("http://localhost:8545");
+const provider = Web3.givenProvider || new Web3.providers.HttpProvider("http://localhost:7545");
 const web3 = new Web3(provider);
 
 //Load smart contract artifacts (uncomment and adjust paths if deployed)
