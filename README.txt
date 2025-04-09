@@ -125,3 +125,5 @@ Provides API endpoints for user registration, login, course registration, certif
 
 package.json and README.md
 Provide project configuration, dependencies, and documentation.
+
+lol
