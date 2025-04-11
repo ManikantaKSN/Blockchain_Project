@@ -140,15 +140,26 @@ app.get('/fees', async (req, res) => {
 app.post('/api/register', async (req, res) => {
   try {
     const { roll_number, name, email, password, dob } = req.body;
+    // Insert user details into the database and return the new user record
     const result = await pool.query(
       'INSERT INTO users (roll_number, name, email, password, dob) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [roll_number, name, email, password, dob]
     );
     const newUser = result.rows[0];
-    // Instead of a placeholder, point to our metadata endpoint:
+
+    // Generate a tokenURI that points to your metadata endpoint on your server.
     const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/metadata/identity/${newUser.user_id}`;
+
+    // Get the available blockchain accounts
     const accounts = await web3.eth.getAccounts();
-    const receipt = await identityContract.methods.mintNFT(email, tokenURI).send({ from: accounts[0] });
+
+    // Call the smart contract's mintNFT function.
+    // Here we use the first account (accounts[0]) as both the minter and the recipient.
+    const receipt = await identityContract.methods
+      .mintNFT(accounts[0], tokenURI)
+      .send({ from: accounts[0] });
+
+    // Respond with the new user details and blockchain transaction receipt.
     res.status(200).json({ success: true, user: newUser, receipt });
   } catch (error) {
     console.error("Registration error:", error);
