@@ -5,7 +5,6 @@
   <title>Dashboard - <%= user.name %></title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
-    /* Basic styling for sections */
     .section {
       border: 1px solid #ccc;
       padding: 15px;
@@ -50,7 +49,6 @@
   </header>
   
   <main>
-    <!-- Section 1: User Details -->
     <section class="section user-details">
       <h2>User Details</h2>
       <p><strong>Name:</strong> <%= user.name %></p>
@@ -61,7 +59,6 @@
       <p><strong>Digital Identity NFT Token ID:</strong> <%= user.identity_token %></p>
     </section>
     
-    <!-- Section 2: Registered Courses -->
     <section class="section courses-section">
       <h2>Registered Courses</h2>
       <% if (courses && courses.length > 0) { %>
@@ -75,11 +72,9 @@
       <% } else { %>
         <p>No courses registered yet.</p>
       <% } %>
-      <!-- Button to navigate to the course registration page -->
       <button onclick="window.location.href='/course?user_id=<%= user.user_id %>'">Register New Course</button>
     </section>
     
-    <!-- Section 3: Navigation Buttons -->
     <section class="section buttons-section">
       <h2>Quick Navigation</h2>
       <button onclick="window.location.href='/certificate?user_id=<%= user.user_id %>'">Certificates</button>
@@ -89,7 +84,7 @@
   </main>
   
   <footer>
-    <p>&copy; 2025 College XXX</p>
+    <p>&copy; IIT Dharwad</p>
   </footer>
 </body>
 </html>

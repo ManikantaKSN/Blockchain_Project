@@ -16,8 +16,6 @@ contract FeePaymentNFT is ERC721URIStorage {
         nftContract = IMyNFT(_nftContractAddress);
     }
 
-    // Payable function to accept fee payments and mint an NFT receipt.
-    // The function verifies that the caller owns the specified NFT identity.
     function payFees(uint256 identityToken, string memory tokenURI) public payable returns (uint256) {
         require(nftContract.ownerOf(identityToken) == msg.sender, "Caller does not own the NFT identity");
         require(msg.value > 0, "Fee must be greater than zero");

@@ -15,8 +15,7 @@
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      
-      // Redirect to dashboard after a short delay.
+
       setTimeout(() => {
         window.location.href = '/faculty/dashboard?faculty_id=<%= faculty.fac_id %>';
       }, 2000);
@@ -34,7 +33,7 @@
     <button onclick="downloadWalletDetails()">Download Wallet Details & Continue to Dashboard</button>
   </main>
   <footer>
-    <p>&copy; 2025 College XXX</p>
+    <p>&copy; IIT Dharwad</p>
   </footer>
 </body>
 </html>

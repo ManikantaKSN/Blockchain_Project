@@ -59,7 +59,6 @@
     <input type="hidden" id="user_id" value="<%= user.user_id %>">
     <% if (registrations && registrations.length > 0) { %>
       <% registrations.forEach(function(reg) { 
-          // Check eligibility: current date must be past end_date and grade > 4.
           const currentDate = new Date();
           const courseEndDate = new Date(reg.end_date);
           const eligible = currentDate > courseEndDate && reg.grade > 4;
@@ -82,7 +81,7 @@
     <% } %>
   </main>
   <footer>
-    <p>&copy; 2025 College XXX</p>
+    <p>&copy; IIT Dharwad</p>
   </footer>
 </body>
 </html>

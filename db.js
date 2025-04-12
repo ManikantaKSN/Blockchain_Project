@@ -1,10 +1,8 @@
-// db.js
 const { Client, Pool } = require('pg');
 require('dotenv').config();
 
 const dbName = process.env.DB_NAME || 'nft_identity';
 
-// Function to check if the database exists; if not, create it.
 async function createDatabaseIfNotExists() {
   const client = new Client({
     user: process.env.DB_USER,
@@ -27,7 +25,6 @@ async function createDatabaseIfNotExists() {
   await client.end();
 }
 
-// Create a connection pool to the target database.
 function createPool() {
   return new Pool({
     user: process.env.DB_USER,
@@ -40,7 +37,6 @@ function createPool() {
 
 const pool = createPool();
 
-// Function to create necessary tables
 async function createTables() {
   try {
     // Users table
@@ -161,7 +157,7 @@ async function createTables() {
   }
 }
 
-// Run asynchronous setup: create database, tables, and insert dummy courses.
+// Create database and tables
 (async () => {
   try {
     await createDatabaseIfNotExists();

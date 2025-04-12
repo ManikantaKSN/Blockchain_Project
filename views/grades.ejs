@@ -70,14 +70,12 @@
           <p><strong>User ID:</strong> <%= reg.user_id %></p>
           <!--<p><strong>Current Grade:</strong> <%= reg.grade %></p> -->
           <% if (reg.grade == 0) { %>
-            <!-- Grade not set, show input field and update button -->
             <div class="grade-form">
               <label for="grade-<%= reg.registration_id %>">New Grade:</label>
               <input type="number" id="grade-<%= reg.registration_id %>" name="grade" min="0" max="10" required>
               <button onclick="updateGrade('<%= reg.registration_id %>')">Update Grade</button>
             </div>
           <% } else { %>
-            <!-- Grade already set, just display the grade -->
             <p><strong>Grade:</strong> <%= reg.grade %></p>
           <% } %>
         </div>
@@ -87,7 +85,7 @@
     <% } %>
   </main>
   <footer>
-    <p>&copy; 2025 College XXX</p>
+    <p>&copy; IIT Dharwad</p>
   </footer>
 </body>
 </html>

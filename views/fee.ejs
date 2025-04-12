@@ -36,12 +36,10 @@
   </style>
   <script>
     async function payFee() {
-      // Retrieve fixed hidden values.
       const userId = document.getElementById('user_id').value;
       const amount = document.getElementById('amount').value;
       
       try {
-        // Submit a POST request to /api/fees with fixed user_id and amount.
         const response = await fetch('/api/fees', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -51,9 +49,7 @@
           const errorData = await response.json();
           throw new Error(errorData.error || "Fee payment failed");
         }
-        // Get the response as a blob (the fee receipt file).
         const blob = await response.blob();
-        // Create a download link for the fee receipt.
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -61,7 +57,6 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        // After download, update the UI by replacing the form with a disabled "Fees Paid" button.
         document.getElementById('feeContainer').innerHTML = '<button class="disabled-btn" disabled>Fees Paid</button>';
       } catch (error) {
         console.error("Fee payment error:", error);
@@ -100,11 +95,9 @@
     </div>
     
     <% if (semester) { %>
-      <!-- Hidden fixed values -->
       <input type="hidden" id="user_id" value="<%= user.user_id %>">
       <input type="hidden" id="amount" value="<%= semester.fees %>">
-      
-      <!-- Container for fee form or fees paid button -->
+
       <div id="feeContainer">
         <% if (paid) { %>
           <button class="disabled-btn" disabled>Fees Paid</button>
@@ -116,7 +109,7 @@
   </main>
   
   <footer>
-    <p>&copy; 2025 College XXX</p>
+    <p>&copy; IIT Dharwad</p>
   </footer>
 </body>
 </html>
