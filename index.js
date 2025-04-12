@@ -192,13 +192,26 @@ app.get('/api/certificate/download', async (req, res) => {
     // This should be an endpoint returning certificate details.
     const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/certificates/${user_id}-${registration.course_id}.json`;
     
+    // Retrieve the user record by user_id.
+    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
+    if (!userResult.rows.length) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const user = userResult.rows[0];
+    
+    // Get the NFT token id representing the user's digital identity.
+    const identityToken = web3.utils.toBigInt(user.identity_token);
+    if (identityToken === null || identityToken === undefined) {
+      return res.status(400).json({ success: false, error: 'User does not have a digital identity NFT.' });
+    }
+
     // Retrieve blockchain accounts.
     const accounts = await web3.eth.getAccounts();
     
     // Issue the certificate NFT using the student's wallet address.
     // Note: In a fully decentralized system, the student should send this transaction from their wallet.
     // For our example, we use the central account.
-    const nftReceipt = await certificateContract.methods.issueCertificate(registration.wallet_address, tokenURI)
+    const nftReceipt = await certificateContract.methods.issueCertificate(identityToken, registration.wallet_address, tokenURI)
       .send({ from: accounts[0], gas: 6721975, gasPrice: '20000000000' });
     
     // Get the certificate NFT token id from the event log.

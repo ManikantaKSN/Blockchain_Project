@@ -84,7 +84,7 @@
     <h1>Course Registration</h1>
     <nav>
       <a href="/dashboard?user_id=<%= user.user_id %>">Dashboard</a>
-      <a href="/logout">Logout</a>
+      <a href="/login">Logout</a>
     </nav>
   </header>
   
@@ -100,8 +100,7 @@
           <h3><%= course.course_name %></h3>
           <div class="course-details" id="course-details-<%= course.course_id %>">
             <p><strong>Credits:</strong> <%= course.credits %></p>
-            <p><strong>Instructor ID:</strong> <%= course.instructor_id %></p>
-            <p><strong>Location:</strong> <%= course.location %></p>
+            <p><strong>Instructor ID:</strong> <%= course.fac_id %></p>
             <p><strong>Start Date:</strong> <%= course.start_date %></p>
             <p><strong>End Date:</strong> <%= course.end_date %></p>
             <button class="register-btn" onclick="registerCourse('<%= course.course_id %>', '<%= course.course_name %>')">
