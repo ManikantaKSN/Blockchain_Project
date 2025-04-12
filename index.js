@@ -27,6 +27,7 @@ const identityArtifact = require('./build/contracts/MyNFT.json');
 const courseArtifact = require('./build/contracts/MyCourseReg.json');
 const certificateArtifact = require('./build/contracts/CertificateNFT.json');
 const feeArtifact = require('./build/contracts/FeePaymentNFT.json');
+const { register } = require('module');
 
 const identityNetworkId = Object.keys(identityArtifact.networks)[0];
 const identityAddress = identityArtifact.networks[identityNetworkId].address;
@@ -294,7 +295,7 @@ app.get('/faculty/dashboard', async (req, res) => {
     const faculty_id = req.query.faculty_id;
     
     // Retrieve faculty details.
-    const facultyResult = await pool.query('SELECT * FROM faculty WHERE faculty_id = $1', [faculty_id]);
+    const facultyResult = await pool.query('SELECT * FROM faculty WHERE fac_id = $1', [faculty_id]);
     if (facultyResult.rows.length === 0) {
       return res.status(404).send("Faculty not found.");
     }
@@ -302,18 +303,76 @@ app.get('/faculty/dashboard', async (req, res) => {
     
     // Retrieve courses taught by this faculty from course_instructor join courses.
     const coursesResult = await pool.query(
-      `SELECT c.* FROM courses c
-       JOIN course_instructor ci ON c.course_id = ci.course_id
-       WHERE ci.instructor_id = $1`,
-      [faculty_id]
+      `SELECT c.* FROM courses c WHERE c.fac_id = $1`, [faculty_id]
     );
     const courses = coursesResult.rows;
+
+    const usersResult = await pool.query(`SELECT * FROM users`);
+    const users = usersResult.rows;
+
+    let registrations = [];
+    // Query that joins registrations with users to include the user's name.
+    const regResult = await pool.query(
+      `SELECT r.registration_id, r.user_id, u.name AS user_name, r.course_id 
+      FROM registrations r 
+      JOIN users u ON r.user_id = u.user_id`
+    );
+    registrations = regResult.rows;
     
     // Render the faculty dashboard view with faculty and courses.
-    res.render('faculty-dashboard', { faculty, courses });
+    res.render('faculty-dashboard', { faculty, courses, users, registrations });
   } catch (error) {
     console.error("Faculty dashboard error:", error);
     res.status(500).send("Error retrieving dashboard: " + error.message);
+  }
+});
+
+app.get('/faculty/add-course', async (req, res) => {
+  try {
+    const faculty_id = req.query.faculty_id; // e.g. /faculty/add-course?faculty_id=3
+    // Retrieve the faculty details to display (optional)
+    const facultyResult = await pool.query('SELECT * FROM faculty WHERE fac_id = $1', [faculty_id]);
+    if (facultyResult.rows.length === 0) {
+      return res.status(404).send("Faculty not found.");
+    }
+    const faculty = facultyResult.rows[0];
+    res.render('add-course', { faculty });
+  } catch (error) {
+    console.error("Error in GET /faculty/add-course:", error);
+    res.status(500).send("Internal server error.");
+  }
+});
+
+app.get('/faculty/grades', async (req, res) => {
+  try {
+    const { course_id, faculty_id } = req.query;
+    // Verify the course belongs to the faculty.
+    const courseResult = await pool.query(
+      'SELECT * FROM courses WHERE course_id = $1 AND fac_id = $2',
+      [course_id, faculty_id]
+    );
+    if (courseResult.rows.length === 0) {
+      return res.status(404).send("Course not found or you are not assigned to this course.");
+    }
+    const course = courseResult.rows[0];
+    
+    // Retrieve all registrations for this course.
+    const regResult = await pool.query(
+      'SELECT * FROM registrations WHERE course_id = $1',
+      [course_id]
+    );
+    const registrations = regResult.rows;
+
+    const userResult = await pool.query(
+      'SELECT * FROM registrations WHERE course_id = $1',
+      [course_id]
+    );
+    const users = userResult.rows;
+    
+    res.render('grades', { course, registrations, users, faculty_id });
+  } catch (error) {
+    console.error("Error in GET /faculty/grades:", error);
+    res.status(500).send("Error retrieving registrations: " + error.message);
   }
 });
 
@@ -323,7 +382,7 @@ app.get('/faculty/dashboard', async (req, res) => {
 // User Registration – store user and mint identity NFT
 app.post('/api/register', async (req, res) => {
   try {
-    const { roll_number, name, email, password, dob } = req.body;
+    const { roll_number, name, email, dob } = req.body;
     
     // Generate a new Ethereum account (wallet) for the user.
     const newAccount = web3.eth.accounts.create();
@@ -332,9 +391,9 @@ app.post('/api/register', async (req, res) => {
     
     // Insert user details into the database, including wallet_address and private_key.
     const result = await pool.query(
-      `INSERT INTO users (roll_number, name, email, password, dob, wallet_address, private_key)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [roll_number, name, email, password, dob, wallet_address, privateKey]
+      `INSERT INTO users (roll_number, name, email, dob, wallet_address, private_key)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [roll_number, name, email, dob, wallet_address, privateKey]
     );
     const newUser = result.rows[0];
     
@@ -452,7 +511,20 @@ app.post('/api/certificate', async (req, res) => {
     const { studentAddress, user_id, course_id } = req.body;
     const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/certificates/${user_id}-${course_id}.json`;
     const accounts = await web3.eth.getAccounts();
-    const receipt = await certificateContract.methods.issueCertificate(studentAddress, tokenURI).send({ from: accounts[0] });
+
+    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
+    if (!userResult.rows.length) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    const user = userResult.rows[0];
+    
+    // Get the NFT token id representing the user's digital identity.
+    const identityToken = web3.utils.toBigInt(user.identity_token);
+    if (identityToken === null || identityToken === undefined) {
+      return res.status(400).json({ success: false, error: 'User does not have a digital identity NFT.' });
+    }
+
+    const receipt = await certificateContract.methods.issueCertificate(identityToken, studentAddress, tokenURI).send({ from: accounts[0] });
     const result = await pool.query(
       'INSERT INTO certificates (user_id, course_id, nft_certificate_uri) VALUES ($1, $2, $3) RETURNING *',
       [user_id, course_id, tokenURI]
@@ -498,16 +570,25 @@ app.post('/api/fees', async (req, res) => {
     // Generate tokenURI for the fee receipt metadata.
     const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/fees/metadata/${user_id}-${Date.now()}.json`;
     
+    // Get the NFT token id representing the user's digital identity.
+    const identityToken = web3.utils.toBigInt(user.identity_token);
+    if (identityToken === null || identityToken === undefined) {
+      return res.status(400).json({ success: false, error: 'User does not have a digital identity NFT.' });
+    }
+    
     // Retrieve blockchain accounts (using a central account for fee processing).
     const accounts = await web3.eth.getAccounts();
     
     // Call the fee payment function in the FeePaymentNFT contract.
-    const receipt = await feeContract.methods.payFees(tokenURI).send({
+    const receipt = await feeContract.methods.payFees(identityToken, tokenURI).send({
       from: accounts[0],
       value: web3.utils.toWei(amount, 'ether'),
       gas: 6721975,
       gasPrice: '20000000000'
     });
+    
+    // Extract the Fee Payment NFT token ID from the event log.
+    const nftTokenId = receipt.events.FeePaid.returnValues.tokenId;
     
     // Insert a record into the transactions table.
     const dbResult = await pool.query(
@@ -525,7 +606,7 @@ app.post('/api/fees', async (req, res) => {
       [semester.semester_no, user_id]
     );
     
-    // Generate a text receipt.
+    // Generate a text receipt including the NFT token id.
     const currentDate = new Date().toLocaleString();
     const receiptText = `
 Fee Payment Receipt
@@ -534,6 +615,7 @@ User ID: ${user_id}
 Semester No: ${semester.semester_no}
 Fee Amount (ETH): ${amount}
 Transaction Hash: ${receipt.transactionHash}
+NFT Token ID: ${nftTokenId}
 Date: ${currentDate}
 `;
     
@@ -547,9 +629,10 @@ Date: ${currentDate}
   }
 });
 
+
 app.post('/api/faculty/register', async (req, res) => {
   try {
-    const { name, email, password, dob } = req.body;
+    const { name, email, dob } = req.body;
     
     // Generate a new Ethereum account (wallet) for the faculty.
     const newAccount = web3.eth.accounts.create();
@@ -558,14 +641,14 @@ app.post('/api/faculty/register', async (req, res) => {
     
     // Insert faculty details into the faculty table.
     const result = await pool.query(
-      `INSERT INTO faculty (name, email, password, dob, wallet_address, private_key)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [name, email, password, dob, wallet_address, privateKey]
+      `INSERT INTO faculty (name, email, dob, wallet_address, private_key)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [name, email, dob, wallet_address, privateKey]
     );
     const newFaculty = result.rows[0];
     
     // Generate tokenURI for the digital identity NFT.
-    const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/metadata/faculty/${newFaculty.faculty_id}`;
+    const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/metadata/faculty/${newFaculty.fac_id}`;
     
     // Retrieve blockchain accounts (using central account for NFT minting).
     const accounts = await web3.eth.getAccounts();
@@ -580,8 +663,8 @@ app.post('/api/faculty/register', async (req, res) => {
     
     // Update the faculty record with the NFT token id.
     await pool.query(
-      'UPDATE faculty SET identity_token = $1 WHERE faculty_id = $2',
-      [tokenId, newFaculty.faculty_id]
+      'UPDATE faculty SET identity_token = $1 WHERE fac_id = $2',
+      [tokenId, newFaculty.fac_id]
     );
     
     // Render the faculty registration success page (or redirect, as needed).
@@ -601,19 +684,66 @@ app.post('/api/faculty/register', async (req, res) => {
 
 app.post('/api/faculty/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, private_key } = req.body;
     
     // Retrieve the faculty record using email and password.
-    const result = await pool.query('SELECT * FROM faculty WHERE email = $1 AND password = $2', [email, password]);
+    const result = await pool.query('SELECT * FROM faculty WHERE email = $1 AND private_key = $2', [email, private_key]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Faculty not found or invalid credentials." });
     }
     const faculty = result.rows[0];
     
     // On successful login, redirect to the faculty dashboard.
-    res.redirect('/faculty/dashboard?faculty_id=' + faculty.faculty_id);
+    res.redirect('/faculty/dashboard?faculty_id=' + faculty.fac_id);
   } catch (error) {
     console.error("Faculty login error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/faculty/add-course', async (req, res) => {
+  try {
+    const { fac_id, course_name, semester_no, credits } = req.body;
+
+    // Retrieve start_date and end_date from the Semester table for the given semester_no.
+    const semesterResult = await pool.query(
+      'SELECT start_date, end_date FROM Semester WHERE semester_no = $1',
+      [semester_no]
+    );
+    if (semesterResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Semester not found.' });
+    }
+    const { start_date, end_date } = semesterResult.rows[0];
+
+    // Insert the new course into the courses table using the retrieved start_date and end_date.
+    const result = await pool.query(
+      `INSERT INTO courses (course_name, fac_id, semester_no, credits, start_date, end_date)
+      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [course_name, fac_id, semester_no, credits, start_date, end_date]
+    );
+    const newCourse = result.rows[0];
+    
+    res.redirect('/faculty/dashboard?faculty_id=' + fac_id);
+  } catch (error) {
+    console.error("Error in POST /api/faculty/add-course:", error);
+    res.status(500).send("Error adding course: " + error.message);
+  }
+});
+
+app.post('/api/faculty/grades', async (req, res) => {
+  try {
+    const { registration_id, grade } = req.body;
+    
+    // Update the grade in the registrations table.
+    const result = await pool.query(
+      'UPDATE registrations SET grade = $1 WHERE registration_id = $2 RETURNING *',
+      [grade, registration_id]
+    );
+    const updatedRegistration = result.rows[0];
+    
+    res.status(200).json({ success: true, registration: updatedRegistration });
+  } catch (error) {
+    console.error("Error in POST /api/faculty/give-grades:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

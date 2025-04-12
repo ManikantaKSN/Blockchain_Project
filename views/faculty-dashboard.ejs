@@ -31,6 +31,20 @@
       border: 1px solid #eee;
       border-radius: 4px;
     }
+    .students-list {
+      margin-top: 10px;
+      background-color: #e9ecef;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .student-item {
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
+    }
+    .student-item:last-child {
+      border-bottom: none;
+    }
     .btn {
       padding: 10px 20px;
       margin: 10px 5px;
@@ -51,6 +65,12 @@
     .add-course-btn:hover {
       background-color: #0056b3;
     }
+    .students-btn {
+      background-color: #6c757d;
+    }
+    .students-btn:hover {
+      background-color: #5a6268;
+    }
   </style>
   <script>
     // Toggle display of course details when a course header is clicked.
@@ -65,12 +85,12 @@
     
     function giveGrades(courseId) {
       // Redirect to the grades page with the course id and faculty id in the query parameters.
-      window.location.href = `/faculty/grades?course_id=${courseId}&faculty_id=<%= faculty.faculty_id %>`;
+      window.location.href = `/faculty/grades?course_id=${courseId}&faculty_id=<%= faculty.fac_id %>`;
     }
     
     function addCourse() {
       // Redirect to the add course page for faculty.
-      window.location.href = `/faculty/add-course?faculty_id=<%= faculty.faculty_id %>`;
+      window.location.href = `/faculty/add-course?faculty_id=<%= faculty.fac_id %>`;
     }
   </script>
 </head>
@@ -78,8 +98,8 @@
   <header>
     <h1>Faculty Dashboard</h1>
     <nav>
-      <a href="/faculty/dashboard?faculty_id=<%= faculty.faculty_id %>">Dashboard</a>
-      <a href="/logout">Logout</a>
+      <a href="/faculty/dashboard?faculty_id=<%= faculty.fac_id %>">Dashboard</a>
+      <a href="/facultylogin">Logout</a>
     </nav>
   </header>
   
@@ -89,7 +109,7 @@
       <h2>Faculty Details</h2>
       <p><strong>Name:</strong> <%= faculty.name %></p>
       <p><strong>Email:</strong> <%= faculty.email %></p>
-      <p><strong>Department:</strong> <%= faculty.department %></p>
+      <p><strong>Date of Birth:</strong> <%= faculty.dob %></p>
       <p><strong>Wallet Address:</strong> <%= faculty.wallet_address %></p>
       <p><strong>Digital Identity NFT Token ID:</strong> <%= faculty.identity_token %></p>
     </section>
@@ -103,17 +123,37 @@
             <h3><%= course.course_name %></h3>
             <div class="course-details" id="course-details-<%= course.course_id %>">
               <p><strong>Credits:</strong> <%= course.credits %></p>
-              <p><strong>Location:</strong> <%= course.location %></p>
+              <p><strong>Semester:</strong> <%= course.semester_no %></p>
               <p><strong>Start Date:</strong> <%= course.start_date %></p>
               <p><strong>End Date:</strong> <%= course.end_date %></p>
               <button class="btn grade-btn" onclick="giveGrades('<%= course.course_id %>')">Give Grades</button>
-              <button class="btn add-course-btn" onclick="addCourse()">Add Course</button>
+              <!-- New section for displaying students -->
+              <div class="students-list">
+                <h4>Registered Students:</h4>
+                <% 
+                // Filter the registrations array for entries with the current course_id
+                let regs = registrations.filter(function(reg) {
+                    return reg.course_id == course.course_id;
+                });
+                %>
+                <% if (regs.length > 0) { %>
+                <% regs.forEach(function(reg) { %>
+                    <div class="student-item">
+                    <p><strong>User ID:</strong> <%= reg.user_id %></p>
+                    <p><strong>Name:</strong> <%= reg.user_name %></p>
+                    </div>
+                <% }); %>
+                <% } else { %>
+                <p>No students registered for this course.</p>
+                <% } %>
+              </div>
             </div>
           </div>
         <% }); %>
       <% } else { %>
         <p>No courses assigned yet.</p>
       <% } %>
+      <button class="btn add-course-btn" onclick="addCourse()">Add Course</button>
     </section>
   </main>
   
