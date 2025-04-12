@@ -1,4 +1,4 @@
-const CourseReg = artifacts.require("CourseReg");
+const CourseReg = artifacts.require("MyCourseReg");
 const MyNFT = artifacts.require("MyNFT");
 
 module.exports = async function(deployer) {

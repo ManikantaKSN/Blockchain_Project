@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Registration Successful</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>
+    function downloadWalletDetails() {
+      const details = `Wallet Address: <%= wallet.address %>\nPrivate Key: <%= wallet.privateKey %>`;
+      const blob = new Blob([details], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'wallet-details.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Redirect to dashboard after a short delay.
+      setTimeout(() => {
+        window.location.href = '/dashboard?user_id=<%= user.user_id %>';
+      }, 2000);
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Registration Successful!</h1>
+  </header>
+  <main>
+    <h2>Your Digital Identity Has Been Created</h2>
+    <p><strong>Wallet Address:</strong> <%= wallet.address %></p>
+    <p><strong>Private Key:</strong> <%= wallet.privateKey %></p>
+    <button onclick="downloadWalletDetails()">Download Wallet Details & Continue to Dashboard</button>
+  </main>
+  <footer>
+    <p>&copy; 2025 College XXX</p>
+  </footer>
+</body>
+</html>

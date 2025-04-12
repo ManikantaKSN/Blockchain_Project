@@ -43,7 +43,7 @@ const pool = createPool();
 // Function to create necessary tables
 async function createTables() {
   try {
-    // Users table with wallet_address column.
+    // Users table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         user_id SERIAL PRIMARY KEY,
@@ -58,14 +58,40 @@ async function createTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // faculty table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS faculty (
+        fac_id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(100) NOT NULL,
+        dob DATE,
+        wallet_address VARCHAR(42),
+        private_key TEXT,
+        identity_token INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
     
-    // Courses table with some extra columns.
+    // Courses table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         course_id SERIAL PRIMARY KEY,
         course_name VARCHAR(100) NOT NULL,
         description TEXT,
         end_date DATE NOT NULL
+      );
+    `);
+
+    //Course instructor
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS course_instructor (
+        fac_id INTEGER,
+        course_id INTEGER,
+        PRIMARY KEY (fac_id, course_id),
+        FOREIGN KEY (fac_id) REFERENCES faculty(fac_id),
+        FOREIGN KEY (course_id) REFERENCES courses(course_id)
       );
     `);
     
@@ -79,6 +105,16 @@ async function createTables() {
         grade INTEGER DEFAULT 0 CHECK (grade >= 0 AND grade <= 10)
       );
     `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS fees_paid (
+        semester_no INTEGER,
+        user_id INTEGER,
+        fees_paid BOOLEAN DEFAULT FALSE,
+        PRIMARY KEY (semester_no, user_id)
+      );
+    `);
+  
     
     // Certificates table.
     await pool.query(`

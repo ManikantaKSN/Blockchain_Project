@@ -235,6 +235,7 @@ Congratulations!`;
   }
 });
 
+// Fee Payment page – shows fee details and payment status
 app.get('/fees', async (req, res) => {
   try {
     // Assume that the user_id is provided as a query parameter, e.g., /fees?user_id=2
@@ -257,14 +258,65 @@ app.get('/fees', async (req, res) => {
     if (semesterResult.rows.length > 0) {
       semester = semesterResult.rows[0];
     }
+
+    // Determine if the fee for this semester has already been paid.
+    let paid = false;
+    if (semester) {
+      const feeCheckResult = await pool.query(
+        'SELECT * FROM fees_paid WHERE semester_no = $1 AND user_id = $2',
+        [semester.semester_no, user_id]
+      );
+      if (feeCheckResult.rows.length > 0 && feeCheckResult.rows[0].fees_paid === true) {
+        paid = true;
+      }
+    }
     
     // Render the fee payment page (fee.ejs) with the user and semester details.
-    res.render('fee', { user, semester });
+    res.render('fee', { user, semester, paid });
   } catch (error) {
     console.error("Error retrieving fee details:", error);
     res.status(500).send("Error retrieving fee details: " + error.message);
   }
 });
+
+// Faculty login page
+app.get('/faculty', (req, res) => {
+  res.render('faculty-login', { title: 'Faculty Login' });
+});
+
+// Faculty Registration page
+app.get('/facultyregister', (req, res) => {
+  res.render('faculty-register', { title: 'Faculty Registration' });
+});
+
+app.get('/faculty/dashboard', async (req, res) => {
+  try {
+    const faculty_id = req.query.faculty_id;
+    
+    // Retrieve faculty details.
+    const facultyResult = await pool.query('SELECT * FROM faculty WHERE faculty_id = $1', [faculty_id]);
+    if (facultyResult.rows.length === 0) {
+      return res.status(404).send("Faculty not found.");
+    }
+    const faculty = facultyResult.rows[0];
+    
+    // Retrieve courses taught by this faculty from course_instructor join courses.
+    const coursesResult = await pool.query(
+      `SELECT c.* FROM courses c
+       JOIN course_instructor ci ON c.course_id = ci.course_id
+       WHERE ci.instructor_id = $1`,
+      [faculty_id]
+    );
+    const courses = coursesResult.rows;
+    
+    // Render the faculty dashboard view with faculty and courses.
+    res.render('faculty-dashboard', { faculty, courses });
+  } catch (error) {
+    console.error("Faculty dashboard error:", error);
+    res.status(500).send("Error retrieving dashboard: " + error.message);
+  }
+});
+
 
 /*--------------------------------------------------------------------*/
 
@@ -418,18 +470,35 @@ app.post('/api/fees', async (req, res) => {
   try {
     const { user_id, amount } = req.body;
     
-    // Retrieve user details (if needed).
+    // Retrieve user details.
     const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
     if (!userResult.rows.length) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
     const user = userResult.rows[0];
     
+    // Retrieve active semester details.
+    const semesterResult = await pool.query(
+      `SELECT * FROM Semester WHERE CURRENT_DATE BETWEEN start_date AND end_date`
+    );
+    if (semesterResult.rows.length === 0) {
+      return res.status(400).json({ success: false, error: 'No active semester found' });
+    }
+    const semester = semesterResult.rows[0];
+    
+    // Check if fee has already been paid for this semester.
+    const feeCheckResult = await pool.query(
+      'SELECT * FROM fees_paid WHERE semester_no = $1 AND user_id = $2',
+      [semester.semester_no, user_id]
+    );
+    if (feeCheckResult.rows.length > 0 && feeCheckResult.rows[0].fees_paid) {
+      return res.status(400).json({ success: false, error: 'Fee already paid for this semester' });
+    }
+    
     // Generate tokenURI for the fee receipt metadata.
-    // For example, it could be an endpoint that returns fee payment details.
     const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/fees/metadata/${user_id}-${Date.now()}.json`;
     
-    // Retrieve blockchain accounts (using a central account for fee processing if required).
+    // Retrieve blockchain accounts (using a central account for fee processing).
     const accounts = await web3.eth.getAccounts();
     
     // Call the fee payment function in the FeePaymentNFT contract.
@@ -440,16 +509,111 @@ app.post('/api/fees', async (req, res) => {
       gasPrice: '20000000000'
     });
     
-    // Optionally, insert a record into a transactions table in your database.
+    // Insert a record into the transactions table.
     const dbResult = await pool.query(
       'INSERT INTO transactions (user_id, type, amount, transaction_hash) VALUES ($1, $2, $3, $4) RETURNING *',
       [user_id, 'fee_payment', amount, receipt.transactionHash]
     );
     const transactionRecord = dbResult.rows[0];
     
-    res.status(200).json({ success: true, transaction: transactionRecord });
+    // Record/update fee payment status in the fees_paid table (upsert logic).
+    await pool.query(
+      `INSERT INTO fees_paid (semester_no, user_id, fees_paid)
+       VALUES ($1, $2, TRUE)
+       ON CONFLICT (semester_no, user_id)
+       DO UPDATE SET fees_paid = TRUE;`,
+      [semester.semester_no, user_id]
+    );
+    
+    // Generate a text receipt.
+    const currentDate = new Date().toLocaleString();
+    const receiptText = `
+Fee Payment Receipt
+---------------------
+User ID: ${user_id}
+Semester No: ${semester.semester_no}
+Fee Amount (ETH): ${amount}
+Transaction Hash: ${receipt.transactionHash}
+Date: ${currentDate}
+`;
+    
+    // Send the receipt as a downloadable text file.
+    res.setHeader('Content-Disposition', 'attachment; filename=fee_receipt.txt');
+    res.setHeader('Content-Type', 'text/plain');
+    res.send(receiptText);
   } catch (error) {
     console.error("Fee payment error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/faculty/register', async (req, res) => {
+  try {
+    const { name, email, password, dob } = req.body;
+    
+    // Generate a new Ethereum account (wallet) for the faculty.
+    const newAccount = web3.eth.accounts.create();
+    const wallet_address = newAccount.address;
+    const privateKey = newAccount.privateKey;  // For demonstration only (store securely in production)
+    
+    // Insert faculty details into the faculty table.
+    const result = await pool.query(
+      `INSERT INTO faculty (name, email, password, dob, wallet_address, private_key)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name, email, password, dob, wallet_address, privateKey]
+    );
+    const newFaculty = result.rows[0];
+    
+    // Generate tokenURI for the digital identity NFT.
+    const tokenURI = `http://localhost:${process.env.PORT || 3000}/api/metadata/faculty/${newFaculty.faculty_id}`;
+    
+    // Retrieve blockchain accounts (using central account for NFT minting).
+    const accounts = await web3.eth.getAccounts();
+    
+    // Mint the NFT for the faculty digital identity.
+    const receipt = await identityContract.methods.mintNFT(tokenURI)
+      .send({ from: accounts[0], gas: 6721975, gasPrice: '20000000000' });
+    
+    // Extract the NFT token id from the event log.
+    const tokenId = receipt.events.IdentityMinted.returnValues.tokenId;
+    console.log("Faculty NFT Token ID: ", tokenId);
+    
+    // Update the faculty record with the NFT token id.
+    await pool.query(
+      'UPDATE faculty SET identity_token = $1 WHERE faculty_id = $2',
+      [tokenId, newFaculty.faculty_id]
+    );
+    
+    // Render the faculty registration success page (or redirect, as needed).
+    res.render('faculty-register-success', {
+      faculty: newFaculty,
+      receipt,
+      wallet: {
+        address: wallet_address,
+        privateKey: privateKey
+      }
+    });
+  } catch (error) {
+    console.error("Faculty registration error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/faculty/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Retrieve the faculty record using email and password.
+    const result = await pool.query('SELECT * FROM faculty WHERE email = $1 AND password = $2', [email, password]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "Faculty not found or invalid credentials." });
+    }
+    const faculty = result.rows[0];
+    
+    // On successful login, redirect to the faculty dashboard.
+    res.redirect('/faculty/dashboard?faculty_id=' + faculty.faculty_id);
+  } catch (error) {
+    console.error("Faculty login error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

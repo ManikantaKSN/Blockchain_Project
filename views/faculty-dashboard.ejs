@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Faculty Dashboard - <%= faculty.name %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin: 15px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    .section h2 {
+      margin-top: 0;
+    }
+    .course-item {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .course-details {
+      display: none;
+      padding: 10px;
+      background-color: #f7f7f7;
+      margin-top: 5px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+    .btn {
+      padding: 10px 20px;
+      margin: 10px 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .grade-btn {
+      background-color: #28a745;
+    }
+    .grade-btn:hover {
+      background-color: #218838;
+    }
+    .add-course-btn {
+      background-color: #007bff;
+    }
+    .add-course-btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+  <script>
+    // Toggle display of course details when a course header is clicked.
+    function toggleCourseDetails(courseId) {
+      const detailsElem = document.getElementById('course-details-' + courseId);
+      if (detailsElem.style.display === 'none' || detailsElem.style.display === '') {
+        detailsElem.style.display = 'block';
+      } else {
+        detailsElem.style.display = 'none';
+      }
+    }
+    
+    function giveGrades(courseId) {
+      // Redirect to the grades page with the course id and faculty id in the query parameters.
+      window.location.href = `/faculty/grades?course_id=${courseId}&faculty_id=<%= faculty.faculty_id %>`;
+    }
+    
+    function addCourse() {
+      // Redirect to the add course page for faculty.
+      window.location.href = `/faculty/add-course?faculty_id=<%= faculty.faculty_id %>`;
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Faculty Dashboard</h1>
+    <nav>
+      <a href="/faculty/dashboard?faculty_id=<%= faculty.faculty_id %>">Dashboard</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+  
+  <main>
+    <!-- Faculty Details Section -->
+    <section class="section">
+      <h2>Faculty Details</h2>
+      <p><strong>Name:</strong> <%= faculty.name %></p>
+      <p><strong>Email:</strong> <%= faculty.email %></p>
+      <p><strong>Department:</strong> <%= faculty.department %></p>
+      <p><strong>Wallet Address:</strong> <%= faculty.wallet_address %></p>
+      <p><strong>Digital Identity NFT Token ID:</strong> <%= faculty.identity_token %></p>
+    </section>
+    
+    <!-- Courses Taught Section -->
+    <section class="section">
+      <h2>Courses Taught</h2>
+      <% if (courses && courses.length > 0) { %>
+        <% courses.forEach(function(course) { %>
+          <div class="course-item" onclick="toggleCourseDetails('<%= course.course_id %>')">
+            <h3><%= course.course_name %></h3>
+            <div class="course-details" id="course-details-<%= course.course_id %>">
+              <p><strong>Credits:</strong> <%= course.credits %></p>
+              <p><strong>Location:</strong> <%= course.location %></p>
+              <p><strong>Start Date:</strong> <%= course.start_date %></p>
+              <p><strong>End Date:</strong> <%= course.end_date %></p>
+              <button class="btn grade-btn" onclick="giveGrades('<%= course.course_id %>')">Give Grades</button>
+              <button class="btn add-course-btn" onclick="addCourse()">Add Course</button>
+            </div>
+          </div>
+        <% }); %>
+      <% } else { %>
+        <p>No courses assigned yet.</p>
+      <% } %>
+    </section>
+  </main>
+  
+  <footer>
+    <p>&copy; 2025 College XXX</p>
+  </footer>
+</body>
+</html>
