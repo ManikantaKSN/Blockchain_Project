@@ -1,129 +1,93 @@
-Overall Architecture Recap
-Digital Identity and Authentication:
+# Project: NFT‑enabled Identity and Access Management
 
-Backend: Users register via an EJS page (Node.js/Express).
+# Installation Guide
 
-Blockchain: Upon registration, the backend calls a smart contract (using Web3.js) to mint an NFT representing the digital identity. The NFT’s metadata (potentially hosted on IPFS) contains user details.
+Follow these steps to set up, deploy, and run the project locally.
 
-Database: User details are stored in PostgreSQL and the blockchain transaction hash (or related event data) is recorded for off-chain reference.
+### 1. Prerequisites
 
-Academic Course Registration:
+- **Node.js:**  
+  Install Node.js (preferably version 20).  
+  Verify installation by running:
+  node -v
+  npm -v
+  ```
 
-Backend: The registration page collects course selections.
+- **PostgreSQL:**  
+  Install PostgreSQL and ensure it’s running.  
+  Update the connection parameters in the `.env` file.
 
-Blockchain: The backend calls the smart contract function (e.g., registerCourse) to record the registration on-chain.
+- **Truffle:**  
+  Install Truffle globally:
+  ```bash
+  npm install -g truffle
+  ```
 
-Database: The course registration details are saved in PostgreSQL and linked to the NFT digital identity.
+- **Ganache GUI:**  
+  Download and install Ganache GUI from the Truffle Suite website.  
+  (This tool will simulate your blockchain network.)
 
-Course Completion Certificates:
+---
 
-Backend: An administrator or automated process triggers certificate issuance through an EJS interface.
+### 2. Project Setup
 
-Blockchain: The smart contract function (e.g., issueCertificate) is called to mint an NFT representing the certificate, with metadata (possibly on IPFS) that details course completion.
+1. **Clone the Project Repository:**  
+   Clone the project repository to your local machine.
 
-Database: Certificate issuance records are saved along with the corresponding transaction hash.
+2. **Configure Environment Variables:**  
+   Create a `.env` file in the project root and update it with your PostgreSQL connection parameters and other configuration values. For example:
+   ```
+   DB_USER=your_db_username
+   DB_PASS=your_db_password
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=nft_identity
+   PORT=3000
+   ```
 
-Semester Fees Payment:
+3. **Install Node Modules:**  
+   In the project directory, run:
+   ```
+   npm install
+   ```
 
-Backend: The fee payment page collects payment details.
+---
 
-Blockchain: The backend calls a payable smart contract function (e.g., payFees) to process the payment and mint an NFT as a receipt.
+### 4. Deploy Smart Contracts
 
-Database: Payment records, including the transaction hash, are stored in PostgreSQL.
+1. **Start Ganache:**  
+   Open Ganache GUI.  
+   - Create a new workspace and select your project directory as the workspace directory.  
+   - Click "Save Workspace" and then "Start the Workspace" to launch Ganache.
 
-nft-identity-system/
-├── build/
-│   └── contracts/
-│       ├── MyNFT.json                  // Digital Identity NFT artifact
-│       ├── MyCourseReg.json            // Course Registration contract artifact
-│       ├── CertificateNFT.json         // Certificate Issuance NFT artifact
-│       └── FeePaymentNFT.json          // Fee Payment NFT artifact
-├── contracts/
-│   ├── MyNFT.sol                       // Digital Identity NFT contract
-│   ├── MyCourseReg.sol                 // Course Registration contract
-│   ├── CertificateNFT.sol              // Certificate Issuance NFT contract
-│   └── FeePaymentNFT.sol               // Fee Payment NFT (payable) contract
-├── migrations/
-│   ├── 1_initial_migration.js
-│   ├── 2_deploy_MyNFT.js
-│   ├── 3_deploy_MyCourseReg.js
-│   ├── 4_deploy_CertificateNFT.js
-│   └── 5_deploy_FeePaymentNFT.js
-├── node_modules/
-├── public/
-│   ├── css/
-│   │   └── style.css
-│   └── js/
-│       └── script.js
-├── views/
-│   ├── dashboard.ejs                   // Dashboard: shows options and registered courses
-│   ├── course.ejs                      // Course Registration page with dropdown and popup
-│   ├── certificate.ejs                 // Certificate Issuance page
-│   ├── fee.ejs                         // Fee Payment page
-│   ├── error.ejs                       // Error page
-│   ├── login.ejs                       // Login page
-│   └── register.ejs                    // Registration page
-├── .env                                // Environment variables (DB credentials, PORT, etc.)
-├── db.js                               // PostgreSQL connection and table creation
-├── index.js                            // Main Express server file and API endpoints
-├── package.json                        // Project configuration and dependencies
-└── README.md                           // Project documentation
+2. **Compile and Migrate Contracts:**  
+   Open a new terminal in your project directory and run:
+   ```bash
+   truffle migrate --network development
+   ```
+   This compiles and deploys your smart contracts (digital identity, certificate, fee payment, etc.) to the Ganache network.  
+   Ensure your migration files pass the required constructor parameters (e.g., NFT contract addresses) as described in the project documentation.
 
-Explanation
-build/
-Contains the JSON files generated by Truffle after compiling and migrating your Solidity contracts.
+---
 
-contracts/
-Holds the Solidity source files for each module:
+### 5. Start the Local Server
 
-MyNFT.sol for digital identity NFTs.
+Open another terminal in your project directory and run:
+```bash
+npm start
+```
+This starts your Express server (typically on port 3000). You should see a message indicating that the server is running.
 
-MyCourseReg.sol for on-chain course registration.
+---
 
-CertificateNFT.sol for certificate issuance.
+### 6. Verify Installation
 
-FeePaymentNFT.sol for processing fee payments.
+1. **Open a Browser:**  
+   Navigate to `http://localhost:3000`.  
+   You should see the login page (for either students or faculty, as per your implementation).
 
-migrations/
-Scripts to deploy your smart contracts to your development blockchain (e.g., Ganache).
+2. **Test Key Features:**  
+   - **Registration:** Register a new user, an NFT is minted and data is stored in the database.  
+   - **Course Registration, Fee Payment, Certificate Issuance, and Amenities:** Navigate through the respective pages to test each module.
 
-node_modules/
-Where npm installs your project dependencies.
-
-public/
-Contains static files like CSS and client-side JavaScript that are served to users.
-
-views/
-Contains all EJS template files for rendering UI pages:
-
-login.ejs and register.ejs for authentication.
-
-dashboard.ejs as the main landing page after login.
-
-course.ejs for course registration (with a dropdown and a popup for details).
-
-certificate.ejs for certificate issuance (showing courses eligible for certificate generation).
-
-fee.ejs for fee payment.
-
-error.ejs to handle undefined routes or errors.
-
-.env
-Stores sensitive configuration values such as your PostgreSQL credentials and the server port.
-
-db.js
-Connects to PostgreSQL, checks if the nft_identity database exists (and creates it if not), and creates the required tables.
-
-index.js
-The main server file that:
-
-Sets up the Express server and middleware.
-
-Defines routes to render EJS views.
-
-Provides API endpoints for user registration, login, course registration, certificate issuance, fee payment, and also includes metadata endpoints (such as /api/metadata/identity/:userId) so that the tokenURI can return JSON metadata from your backend.
-
-package.json and README.md
-Provide project configuration, dependencies, and documentation.
-
-lol
+---

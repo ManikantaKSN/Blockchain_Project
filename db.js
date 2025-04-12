@@ -136,6 +136,47 @@ async function createTables() {
       );
     `);
 
+    // Events table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS events (
+        event_id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        description TEXT,
+        event_date DATE NOT NULL,
+        location VARCHAR(100)
+      );
+    `);
+
+    // Event participation
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS event_participation (
+        participation_id SERIAL PRIMARY KEY,
+        student_address VARCHAR(42) NOT NULL,
+        event_id INTEGER REFERENCES events(event_id),
+        participation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Rooms table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rooms (
+        room_id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        location VARCHAR(100),
+        capacity INTEGER
+      );
+    `);
+
+    // Room booking table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS room_booking (
+        booking_id SERIAL PRIMARY KEY,
+        student_address VARCHAR(42) NOT NULL,
+        room_id INTEGER REFERENCES rooms(room_id),
+        booking_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // Insert sample data into the Semester table
     await pool.query(`
       INSERT INTO Semester (semester_no, start_date, end_date, fees)
@@ -150,6 +191,28 @@ async function createTables() {
         (8, '2025-06-01', '2025-10-31', 0.16)
       ON CONFLICT (semester_no) DO NOTHING;
     `);
+
+    await pool.query(`
+      INSERT INTO rooms (name, location, capacity) VALUES
+      ('Conference Room A', 'Building 1 - Floor 2', 50),
+      ('Seminar Hall B', 'Building 3 - Floor 1', 100),
+      ('Computer Lab C', 'Tech Block - Room 101', 40),
+      ('Study Room D', 'Library Basement', 20),
+      ('Media Room E', 'Building 2 - Floor 3', 30),
+      ('Auditorium A', 'Main Building - Ground Floor', 200),
+      ('Group Study Room F', 'Library First Floor', 10);
+    `);
+    
+    await pool.query(`
+      INSERT INTO events (name, description, event_date, location) VALUES
+      ('Tech Talk: AI & Future', 'A session on the latest trends in AI and its impact on society.', '2025-05-15', 'Auditorium A'),
+      ('Cultural Fest 2025', 'Annual college cultural fest with music, dance, and food.', '2025-06-10', 'Main Grounds'),
+      ('Hackathon 2.0', '24-hour coding challenge for innovative minds.', '2025-05-25', 'Innovation Lab'),
+      ('Workshop on Blockchain', 'Hands-on session introducing blockchain concepts.', '2025-05-20', 'Seminar Hall B'),
+      ('Yoga for Students', 'Morning yoga session to promote well-being.', '2025-04-20', 'Wellness Center');
+    `);
+
+    
     
     console.log("All tables created or already exist.");
   } catch (error) {

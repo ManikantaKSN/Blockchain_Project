@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Amenities - <%= user.name %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .info-section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin: 15px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    .action-btn {
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .action-btn:hover {
+      background-color: #218838;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    li {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Amenities</h1>
+    <nav>
+      <a href="/dashboard?user_id=<%= user.user_id %>">Dashboard</a>
+      <a href="/logout">Logout</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="info-section">
+      <h2>Welcome, <%= user.name %></h2>
+      <p><strong>Roll Number:</strong> <%= user.roll_number %></p>
+      <p><strong>Email:</strong> <%= user.email %></p>
+    </div>
+
+    <div class="info-section">
+      <h2>Available Events</h2>
+      <% if (events && events.length > 0) { %>
+        <ul>
+          <% events.forEach(event => { %>
+            <li>
+              <strong><%= event.name %></strong> - <%= event.date %>
+              <button class="action-btn" onclick="participate('<%= event.event_id %>')">Participate</button>
+            </li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p>No upcoming events available.</p>
+      <% } %>
+    </div>
+
+    <div class="info-section">
+      <h2>Available Rooms</h2>
+      <% if (rooms && rooms.length > 0) { %>
+        <ul>
+          <% rooms.forEach(room => { %>
+            <li>
+              <strong><%= room.name %></strong><br>
+              <strong>Location:</strong> <%= room.location || 'Not specified' %><br>
+              <strong>Capacity:</strong> <%= room.capacity %><br>
+              <button class="action-btn" onclick="bookRoom('<%= room.room_id %>')">Book Room</button>
+            </li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <p>No rooms available for booking at the moment.</p>
+      <% } %>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 College XXX</p>
+  </footer>
+
+  <script>
+    const userId = '<%= user.user_id %>';
+
+    async function participate(eventId) {
+      try {
+        const response = await fetch('/api/participateEvent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventId: eventId, user_id: userId })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Participation failed');
+        alert("Successfully registered for the event!");
+        location.reload();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+
+    async function bookRoom(roomId) {
+      try {
+        const response = await fetch('/api/bookRoom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomId: roomId, user_id: userId })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Room booking failed');
+        alert("Room booked successfully!");
+        location.reload();
+      } catch (err) {
+        alert("Error: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
