@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard - <%= user.name %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* Basic styling for sections */
+    .section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin: 15px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    .section h2 {
+      margin-top: 0;
+    }
+    .course-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    .course-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .buttons-section button,
+    .courses-section button {
+      margin-right: 10px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      background-color: #007bff;
+      color: #fff;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .buttons-section button:hover,
+    .courses-section button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dashboard</h1>
+    <nav>
+      <a href="/login">Logout</a>
+    </nav>
+  </header>
+  
+  <main>
+    <!-- Section 1: User Details -->
+    <section class="section user-details">
+      <h2>User Details</h2>
+      <p><strong>Name:</strong> <%= user.name %></p>
+      <p><strong>Roll Number:</strong> <%= user.roll_number %></p>
+      <p><strong>Email:</strong> <%= user.email %></p>
+      <p><strong>Date of Birth:</strong> <%= user.dob %></p>
+      <p><strong>Wallet Address:</strong> <%= user.wallet_address %></p>
+      <p><strong>Digital Identity NFT Token ID:</strong> <%= user.identity_token %></p>
+    </section>
+    
+    <!-- Section 2: Registered Courses -->
+    <section class="section courses-section">
+      <h2>Registered Courses</h2>
+      <% if (courses && courses.length > 0) { %>
+        <ul class="course-list">
+          <% courses.forEach(function(course) { %>
+            <li>
+              <strong><%= course.course_name %></strong>
+            </li>
+          <% }); %>
+        </ul>
+      <% } else { %>
+        <p>No courses registered yet.</p>
+      <% } %>
+      <!-- Button to navigate to the course registration page -->
+      <button onclick="window.location.href='/course?user_id=<%= user.user_id %>'">Register New Course</button>
+    </section>
+    
+    <!-- Section 3: Navigation Buttons -->
+    <section class="section buttons-section">
+      <h2>Quick Navigation</h2>
+      <button onclick="window.location.href='/certificate?user_id=<%= user.user_id %>'">Certificates</button>
+      <button onclick="window.location.href='/fees?user_id=<%= user.user_id %>'">Fee Payment</button>
+      <button onclick="window.location.href='/amenities?user_id=<%= user.user_id %>'">Amenities</button>
+    </section>
+  </main>
+  
+  <footer>
+    <p>&copy; 2025 College XXX</p>
+  </footer>
+</body>
+</html>

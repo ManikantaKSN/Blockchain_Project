@@ -2,43 +2,80 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title><%= title %></title>
+  <title>Course Registration</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .course-item {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      margin: 10px 0;
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .course-details {
+      display: none;
+      padding: 10px;
+      background-color: #f7f7f7;
+      margin-top: 5px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+    .register-btn {
+      background-color: #28a745;
+      color: #fff;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .register-btn:hover {
+      background-color: #218838;
+    }
+  </style>
   <script>
-    function showCourseDetails() {
-      const select = document.getElementById("courseDropdown");
-      const selectedOption = select.options[select.selectedIndex];
-      const detailsDiv = document.getElementById("courseDetails");
-      // Display course details from data attributes
-      detailsDiv.innerHTML = "<p><strong>Course Name:</strong> " + selectedOption.getAttribute("data-name") +
-                             "</p><p><strong>Description:</strong> " + selectedOption.getAttribute("data-desc") +
-                             "</p><p><strong>End Date:</strong> " + selectedOption.getAttribute("data-end") + "</p>" +
-                             "<button onclick='registerCourse()'>Register for Course</button>";
-      detailsDiv.style.display = "block";
+    // Toggle display of course details when a course header is clicked.
+    function toggleDetails(courseId) {
+      const detailsElem = document.getElementById('course-details-' + courseId);
+      if(detailsElem.style.display === 'none' || detailsElem.style.display === '') {
+        detailsElem.style.display = 'block';
+      } else {
+        detailsElem.style.display = 'none';
+      }
     }
     
-    function registerCourse() {
-      // Collect user_id from a hidden field or prompt (for demo, we use a prompt)
-      const user_id = prompt("Enter your User ID:");
-      const course_id = document.getElementById("courseDropdown").value;
-      const wallet_address = prompt("Enter your wallet address:");
-      fetch("/api/course", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id, course_id, wallet_address })
-      })
-      .then(response => response.json())
-      .then(data => {
+    // When the user clicks "Register" on a course, call the backend API.
+    async function registerCourse(courseId, courseName) {
+      // Prevent the dropdown toggling when clicking the button.
+      event.stopPropagation();
+
+      // Retrieve the user id and NFT token (digital identity) from hidden inputs.
+      const userId = document.getElementById('user_id').value;
+      const identityToken = document.getElementById('identity_token').value;
+      
+      try {
+        const response = await fetch('/api/course/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            course_id: courseId,
+            identity_token: identityToken
+          })
+        });
+        const data = await response.json();
         if(data.success) {
-          alert("Course registration successful!");
-          window.location.href = "/dashboard?user_id=" + user_id;
+          alert("Successfully registered for course: " + courseName);
+          // Optionally refresh or update course list.
+          window.location.reload();
         } else {
           alert("Error: " + data.error);
         }
-      })
-      .catch(error => {
-        console.error("Registration error:", error);
-      });
+      } catch (error) {
+        console.error("Error during course registration:", error);
+        alert("An error occurred. Please try again.");
+      }
     }
   </script>
 </head>
@@ -46,24 +83,40 @@
   <header>
     <h1>Course Registration</h1>
     <nav>
-      <a href="/dashboard">Dashboard</a> |
+      <a href="/dashboard?user_id=<%= user.user_id %>">Dashboard</a>
       <a href="/logout">Logout</a>
     </nav>
   </header>
+  
   <main>
-    <label for="courseDropdown">Select a course:</label>
-    <select id="courseDropdown" onchange="showCourseDetails()">
-      <option value="">--Select a Course--</option>
-      <% courses.forEach(course => { %>
-        <option value="<%= course.course_id %>" data-name="<%= course.course_name %>" data-desc="<%= course.description %>" data-end="<%= course.end_date %>">
-          <%= course.course_name %>
-        </option>
+    <!-- Hidden fields for user identification -->
+    <input type="hidden" id="user_id" value="<%= user.user_id %>">
+    <input type="hidden" id="identity_token" value="<%= user.identity_token %>">
+    
+    <h2>Available Courses</h2>
+    <% if (courses && courses.length > 0) { %>
+      <% courses.forEach(function(course) { %>
+        <div class="course-item" onclick="toggleDetails('<%= course.course_id %>')">
+          <h3><%= course.course_name %></h3>
+          <div class="course-details" id="course-details-<%= course.course_id %>">
+            <p><strong>Credits:</strong> <%= course.credits %></p>
+            <p><strong>Instructor ID:</strong> <%= course.instructor_id %></p>
+            <p><strong>Location:</strong> <%= course.location %></p>
+            <p><strong>Start Date:</strong> <%= course.start_date %></p>
+            <p><strong>End Date:</strong> <%= course.end_date %></p>
+            <button class="register-btn" onclick="registerCourse('<%= course.course_id %>', '<%= course.course_name %>')">
+              Register
+            </button>
+          </div>
+        </div>
       <% }); %>
-    </select>
-    <div id="courseDetails" style="display:none; border:1px solid #ccc; padding: 1rem; margin-top:1rem;"></div>
+    <% } else { %>
+      <p>No courses available at the moment.</p>
+    <% } %>
   </main>
+  
   <footer>
-    <p>&copy; 2025 College Name</p>
+    <p>&copy; 2025 College XXX</p>
   </footer>
 </body>
 </html>

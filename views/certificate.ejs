@@ -2,57 +2,87 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title><%= title %></title>
+  <title>Certificates - <%= user.name %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .course-item { 
+      border: 1px solid #ccc; 
+      padding: 10px; 
+      margin-bottom: 10px; 
+      border-radius: 4px;
+    }
+    .get-cert-btn {
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .get-cert-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
   <script>
-    function generateCertificate(course_id, studentAddress) {
-      const user_id = document.getElementById("user_id").value;
-      fetch("/api/certificate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentAddress, user_id, course_id })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if(data.success) {
-          alert("Certificate generated successfully!");
-          window.location.href = "/dashboard?user_id=" + user_id;
-        } else {
-          alert("Error: " + data.error);
+    async function downloadCertificate(registrationId, courseName) {
+      try {
+        const userId = document.getElementById('user_id').value;
+        const response = await fetch(`/api/certificate/download?user_id=${userId}&registration_id=${registrationId}`);
+        if (!response.ok) {
+          throw new Error("Failed to generate certificate.");
         }
-      })
-      .catch(error => {
-        console.error("Certificate error:", error);
-      });
+        const certText = await response.text();
+        const blob = new Blob([certText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${courseName.replace(/\s/g, '_')}_Certificate.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (error) {
+        alert("Error downloading certificate: " + error.message);
+      }
     }
   </script>
 </head>
 <body>
   <header>
-    <h1>Certificate Issuance</h1>
+    <h1>Certificates</h1>
     <nav>
-      <a href="/dashboard?user_id=<%= user_id %>">Dashboard</a> |
+      <a href="/dashboard?user_id=<%= user.user_id %>">Dashboard</a>
       <a href="/logout">Logout</a>
     </nav>
   </header>
   <main>
-    <input type="hidden" id="user_id" value="<%= user_id %>">
-    <h2>Your Courses</h2>
-    <ul>
-      <% courses.forEach(course => { %>
-        <li>
-          <strong><%= course.course_name %></strong> – End Date: <%= course.end_date %>
-          <% if (new Date(currentDate) > new Date(course.end_date)) { %>
-            <button onclick="generateCertificate('<%= course.course_id %>', prompt('Enter your wallet address:'))">Generate Certificate</button>
+    <input type="hidden" id="user_id" value="<%= user.user_id %>">
+    <% if (registrations && registrations.length > 0) { %>
+      <% registrations.forEach(function(reg) { 
+          // Check eligibility: current date must be past end_date and grade > 4.
+          const currentDate = new Date();
+          const courseEndDate = new Date(reg.end_date);
+          const eligible = currentDate > courseEndDate && reg.grade > 4;
+      %>
+        <div class="course-item">
+          <h3><%= reg.course_name %></h3>
+          <p><strong>Grade:</strong> <%= (reg.grade == 0 ? 'N/A' : reg.grade) %></p>
+          <p><strong>End Date:</strong> <%= reg.end_date %></p>
+          <% if (eligible) { %>
+            <button class="get-cert-btn" onclick="downloadCertificate('<%= reg.registration_id %>', '<%= reg.course_name %>')">
+              Get Certificate
+            </button>
           <% } else { %>
-            <span>Certificate not available yet</span>
+            <button class="get-cert-btn" disabled>Not Eligible</button>
           <% } %>
-        </li>
+        </div>
       <% }); %>
-    </ul>
+    <% } else { %>
+      <p>No course registrations found.</p>
+    <% } %>
   </main>
   <footer>
-    <p>&copy; 2025 College Name</p>
+    <p>&copy; 2025 College XXX</p>
   </footer>
 </body>
 </html>

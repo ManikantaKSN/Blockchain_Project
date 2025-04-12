@@ -53,6 +53,8 @@ async function createTables() {
         password VARCHAR(100) NOT NULL,
         dob DATE,
         wallet_address VARCHAR(42),
+        private_key TEXT,
+        identity_token INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -74,6 +76,7 @@ async function createTables() {
         user_id INTEGER REFERENCES users(user_id),
         course_id INTEGER REFERENCES courses(course_id),
         registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        grade INTEGER DEFAULT 0 CHECK (grade >= 0 AND grade <= 10)
       );
     `);
     
@@ -85,6 +88,16 @@ async function createTables() {
         course_id INTEGER REFERENCES courses(course_id),
         nft_certificate_uri TEXT,
         issued_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Semester (
+        semester_no SERIAL PRIMARY KEY,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        fees NUMERIC(10,4) NOT NULL,
+        CHECK (fees >= 0)
       );
     `);
     

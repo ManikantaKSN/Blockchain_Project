@@ -1,5 +1,9 @@
-const MyCourseReg = artifacts.require("MyCourseReg");
+const CourseReg = artifacts.require("CourseReg");
+const MyNFT = artifacts.require("MyNFT");
 
-module.exports = function (deployer) {
-  deployer.deploy(MyCourseReg);
+module.exports = async function(deployer) {
+  // Get the deployed NFT contract instance
+  const nftInstance = await MyNFT.deployed();
+  // Deploy CourseReg with the NFT contract's address as parameter
+  await deployer.deploy(CourseReg, nftInstance.address);
 };

@@ -1,21 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-contract CourseReg {
-    event CourseRegistered(address indexed student, uint256 courseId);
+// Define an interface for the NFT contract so we can call ownerOf().
+interface IMyNFT {
+    function ownerOf(uint256 tokenId) external view returns (address);
+}
 
-    // Mapping from student address to an array of course IDs they've registered for.
-    mapping(address => uint256[]) private registrations;
+contract MyCourseReg {
+    // Event including NFT token id as identity, caller's address, and course id.
+    event CourseRegistered(uint256 indexed tokenId, address indexed owner, uint256 courseId);
 
-    // Register a course for a student.
-    // The student parameter should be a valid Ethereum address (ideally, the wallet that holds their identity NFT).
-    function registerCourse(address student, uint256 courseId) public {
-        registrations[student].push(courseId);
-        emit CourseRegistered(student, courseId);
+    // Mapping from NFT token id (digital identity) to an array of course IDs registered.
+    mapping(uint256 => uint256[]) private registrations;
+
+    // Reference to the NFT contract.
+    IMyNFT public nftContract;
+
+    // Set the NFT contract address upon deployment.
+    constructor(address _nftContractAddress) {
+        nftContract = IMyNFT(_nftContractAddress);
     }
 
-    // Retrieve the list of courses a student has registered for.
-    function getCourses(address student) public view returns (uint256[] memory) {
-        return registrations[student];
+    // Register a course for a user identified by their NFT token id.
+    // This function first verifies that msg.sender is the owner of the NFT.
+    function registerCourse(uint256 identityToken, uint256 courseId) public {
+        require(nftContract.ownerOf(identityToken) == msg.sender, "Caller does not own the NFT identity");
+        registrations[identityToken].push(courseId);
+        emit CourseRegistered(identityToken, msg.sender, courseId);
+    }
+
+    // Retrieve the list of course IDs registered for a given NFT identity token.
+    function getCourses(uint256 identityToken) public view returns (uint256[] memory) {
+        return registrations[identityToken];
     }
 }

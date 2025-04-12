@@ -11,13 +11,13 @@ contract MyNFT is ERC721URIStorage {
         tokenCounter = 0;
     }
 
-    // Mints an NFT for a given user with metadata stored in tokenURI.
-    function mintNFT(address user, string memory tokenURI) public returns (uint256) {
+    // Mint an NFT for the caller with metadata stored in tokenURI.
+    function mintNFT(string memory tokenURI) public returns (uint256) {
         uint256 newTokenId = tokenCounter;
-        _safeMint(user, newTokenId);
+        _safeMint(msg.sender, newTokenId);
         _setTokenURI(newTokenId, tokenURI);
         tokenCounter++;
-        emit IdentityMinted(user, newTokenId, tokenURI);
+        emit IdentityMinted(msg.sender, newTokenId, tokenURI);
         return newTokenId;
     }
 }

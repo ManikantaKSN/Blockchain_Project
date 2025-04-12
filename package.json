@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "node index.js",
+    "open": "open-cli http://localhost:3000",
+    "start": "concurrently \"npm run server\" \"npm run open\""
   },
   "keywords": [],
   "author": "",
@@ -19,5 +22,9 @@
     "openzeppelin-solidity": "^4.8.1",
     "pg": "^8.14.1",
     "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "open-cli": "^8.0.0"
   }
 }
