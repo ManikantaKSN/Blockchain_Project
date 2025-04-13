@@ -33,6 +33,11 @@
     .register-btn:hover {
       background-color: #218838;
     }
+    .disabled-msg {
+      color: red;
+      margin-top: 10px;
+      font-weight: bold;
+    }
   </style>
   <script>
     // Toggle display of course details when a course header is clicked.
@@ -67,7 +72,6 @@
         const data = await response.json();
         if(data.success) {
           alert("Successfully registered for course: " + courseName);
-          // Optionally refresh or update course list.
           window.location.reload();
         } else {
           alert("Error: " + data.error);
@@ -89,7 +93,7 @@
   </header>
   
   <main>
-
+    <!-- Hidden fields for user identification -->
     <input type="hidden" id="user_id" value="<%= user.user_id %>">
     <input type="hidden" id="identity_token" value="<%= user.identity_token %>">
     
@@ -103,9 +107,13 @@
             <p><strong>Instructor ID:</strong> <%= course.fac_id %></p>
             <p><strong>Start Date:</strong> <%= course.start_date %></p>
             <p><strong>End Date:</strong> <%= course.end_date %></p>
-            <button class="register-btn" onclick="registerCourse('<%= course.course_id %>', '<%= course.course_name %>')">
-              Register
-            </button>
+            <% if (feePaid) { %>
+              <button class="register-btn" onclick="registerCourse('<%= course.course_id %>', '<%= course.course_name %>')">
+                Register
+              </button>
+            <% } else { %>
+              <p class="disabled-msg">Please pay fee for this semester before registering.</p>
+            <% } %>
           </div>
         </div>
       <% }); %>

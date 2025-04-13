@@ -125,7 +125,26 @@ app.get('/course', async (req, res) => {
     const coursesResult = await pool.query('SELECT * FROM courses');
     const courses = coursesResult.rows;
 
-    res.render('course', { user, courses });
+    const semesterResult = await pool.query(
+      `SELECT * FROM Semester WHERE CURRENT_DATE BETWEEN start_date AND end_date`
+    );
+    let semester = null;
+    if (semesterResult.rows.length > 0) {
+      semester = semesterResult.rows[0];
+    }
+    
+    let feePaid = false;
+    if (semester) {
+      const feeCheckResult = await pool.query(
+        'SELECT fees_paid FROM fees_paid WHERE semester_no = $1 AND user_id = $2',
+        [semester.semester_no, user_id]
+      );
+      if (feeCheckResult.rows.length > 0) {
+        feePaid = feeCheckResult.rows[0].fees_paid;
+      }
+    }
+
+    res.render('course', { user, courses, feePaid });
   } catch (error) {
     console.error("Error retrieving courses:", error);
     res.status(500).send("Error retrieving courses: " + error.message);
@@ -176,7 +195,7 @@ app.get('/api/certificate/download', async (req, res) => {
     
     const currentDate = new Date();
     const courseEndDate = new Date(registration.end_date);
-    if (currentDate < courseEndDate || registration.grade <= 4) {
+    if (/*currentDate < courseEndDate ||*/ registration.grade <= 4) {
       return res.status(400).send("Not eligible for certificate.");
     }
     
@@ -690,51 +709,72 @@ app.get('/amenities', async (req, res) => {
   try {
     const user_id = req.query.user_id;
 
-    // Retrieve the user details
     const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
-    if (!userResult.rows.length) {
+    if (userResult.rows.length === 0) {
       return res.status(404).send("User not found.");
     }
     const user = userResult.rows[0];
 
-    // Retrieve available events (assuming an "events" table exists)
     const eventsResult = await pool.query('SELECT * FROM events');
     const events = eventsResult.rows;
 
-    // Retrieve available rooms (assuming a "rooms" table exists)
     const roomsResult = await pool.query('SELECT * FROM rooms');
     const rooms = roomsResult.rows;
 
-    // Render the amenities page with events, rooms, and user data.
-    res.render('amenities', { events, rooms, user_id, user });
+    const registeredEventsResult = await pool.query(
+      `SELECT e.* 
+       FROM event_participation ep 
+       JOIN events e ON ep.event_id = e.event_id 
+       WHERE ep.user_id = $1`,
+      [user.user_id]
+    );
+    const registeredEvents = registeredEventsResult.rows;
+
+    const bookedRoomsResult = await pool.query(
+      `SELECT rb.*, r.name as room_name, r.location, r.capacity
+       FROM room_booking rb
+       JOIN rooms r ON rb.room_id = r.room_id
+       WHERE rb.user_id = $1`,
+      [user_id]
+    );
+    const bookedRooms = bookedRoomsResult.rows;
+
+    res.render('amenities', { events, rooms, user_id, user, registeredEvents, bookedRooms });
   } catch (error) {
     console.error("Error fetching amenities:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
+
 app.post('/api/bookRoom', async (req, res) => {
   try {
     const { user_id, roomId } = req.body;
 
-    // Retrieve user details.
     const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
     const { wallet_address, identity_token } = userResult.rows[0];
     const accounts = await web3.eth.getAccounts();
-    // Verify that msg.sender owns the tokenId by calling a method on amenitiesContract.
+ 
+    const bookingCheckResult = await pool.query(
+      'SELECT * FROM room_booking WHERE user_id = $1 AND booking_date = CURRENT_DATE',
+      [user_id]
+    );
+    if (bookingCheckResult.rows.length > 0) {
+      return res.status(400).json({ success: false, error: 'You can only book one room per day.' });
+    }
+
     try {
       await amenitiesContract.methods.bookRoom(identity_token).call({ from: accounts[0] });
     } catch (err) {
       return res.status(400).json({ success: false, error: 'You must have an NFT to book a room.' });
     }
 
-    // Insert the room booking record into the database.
     const result = await pool.query(
-      'INSERT INTO room_booking (student_address, room_id) VALUES ($1, $2) RETURNING *',
-      [wallet_address, roomId]
+      'INSERT INTO room_booking (user_id, room_id) VALUES ($1, $2) RETURNING *',
+      [user_id, roomId]
     );
 
     res.status(200).json({ success: true, booking: result.rows[0] });
@@ -747,36 +787,48 @@ app.post('/api/bookRoom', async (req, res) => {
 app.post('/api/participateEvent', async (req, res) => {
   try {
     const { user_id, eventId } = req.body;
-    
-    // Retrieve user details from the database.
+
     const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [user_id]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'User not found.' });
     }
     const user = userResult.rows[0];
     const { wallet_address, identity_token } = user;
-    
-    const accounts = await web3.eth.getAccounts();
-    
-    // Verify NFT ownership by checking the owner of the identity token.
     const owner = await amenitiesContract.methods.checkOwnership(identity_token).call();
-    
-    // Check participation eligibility using the amenitiesContract.
-    const eligible = await amenitiesContract.methods.participateInEvent(identity_token)
-                          .call({ from: accounts[0] });
-    
-    // If the user is not eligible, return an error.
+
+    const accounts = await web3.eth.getAccounts();
+    const eligible = await amenitiesContract.methods.participateInEvent(identity_token).call({ from: accounts[0] });
+
+    const participationCheck = await pool.query(
+      'SELECT * FROM event_participation WHERE user_id = $1 AND event_id = $2',
+      [user_id, eventId]
+    );
+    if (participationCheck.rows.length > 0) {
+      return res.status(400).json({ success: false, error: 'You are already registered for this event.' });
+    }
+
     if (!eligible) {
       return res.status(400).json({ success: false, error: 'You must have an NFT to participate in the event.' });
     }
-    
-    // Insert a new record into the event_participation table.
+
     const participationResult = await pool.query(
-      'INSERT INTO event_participation (student_address, event_id) VALUES ($1, $2) RETURNING *',
-      [wallet_address, eventId]
+      'INSERT INTO event_participation (user_id, event_id) VALUES ($1, $2) RETURNING *',
+      [user_id, eventId]
     );
-    
-    res.status(200).json({ success: true, participation: participationResult.rows[0] });
+
+    const registeredEventsResult = await pool.query(
+      `SELECT e.* 
+       FROM event_participation ep 
+       JOIN events e ON ep.event_id = e.event_id 
+       WHERE ep.user_id = $1`,
+      [user_id]
+    );
+
+    res.status(200).json({ 
+      success: true, 
+      participation: participationResult.rows[0],
+      registeredEvents: registeredEventsResult.rows 
+    });
   } catch (error) {
     console.error("Event participation error:", error);
     res.status(500).json({ success: false, error: error.message });

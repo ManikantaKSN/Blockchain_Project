@@ -61,7 +61,7 @@
       <% registrations.forEach(function(reg) { 
           const currentDate = new Date();
           const courseEndDate = new Date(reg.end_date);
-          const eligible = currentDate > courseEndDate && reg.grade > 4;
+          const eligible = /*currentDate > courseEndDate &&*/ reg.grade > 4;
       %>
         <div class="course-item">
           <h3><%= reg.course_name %></h3>
